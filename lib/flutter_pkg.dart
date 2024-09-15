@@ -14,13 +14,23 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 class speechToTextBtn extends StatefulWidget {
   speechToTextBtn(
-      {required this.child,
+      {required this.startedRecordChild,
+      required this.stopedRecordChild,
       required this.theText,
-      required this.isEn,
+      required this.isEnglish,
       super.key});
-  final bool isEn;
+
+  ///The Language Arabic Or English If it's Arabic [isEnglish]=false else if it's English [isEnglish]=true
+  final bool isEnglish;
+
+  /// You Need String In ValueChanged Function YourString=Valu in [theText] ValueChanged
   final ValueChanged<String> theText;
-  final Widget child;
+
+  /// That Is The Wedgit In The Mic Stop Record
+  final Widget startedRecordChild;
+
+  /// That Is The Wedgit In The Mic Start Record
+  final Widget stopedRecordChild;
 
   @override
   State<speechToTextBtn> createState() => _speechToTextBtnState();
@@ -32,6 +42,8 @@ class _speechToTextBtnState extends State<speechToTextBtn> {
   final modelLoader = ModelLoader();
   final sampleRate = 16000;
   Model? model;
+
+  /// If Do You Want The Btn For Mobils Not Suported By Google That Is Availabale
   Future<bool> isAndroidGoogleNotSupportedBool = isAndroidGoogleNotSupported();
 
   Recognizer? recognizer;
@@ -50,19 +62,20 @@ class _speechToTextBtnState extends State<speechToTextBtn> {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: startStopdRecord,
-      child: widget.child,
-    );
+        onTap: startStopdRecord,
+        child: recognitionStarted
+            ? widget.startedRecordChild
+            : widget.stopedRecordChild);
   }
 
   void loadModel() async {
-    if (await modelLoader.isModelAlreadyLoaded(widget.isEn
+    if (await modelLoader.isModelAlreadyLoaded(widget.isEnglish
         ? "vosk-model-small-en-us-0.15"
         : "vosk-model-ar-mgb2-0.4")) {
       try {
         setState(() async {
           var modelCreate = vosk.createModel(await modelLoader.modelPath(
-              widget.isEn
+              widget.isEnglish
                   ? "vosk-model-small-en-us-0.15"
                   : "vosk-model-ar-mgb2-0.4"));
 
@@ -88,7 +101,7 @@ class _speechToTextBtnState extends State<speechToTextBtn> {
             .loadModelsList()
             .then((modelsList) => modelsList.firstWhere((model) =>
                 model.name ==
-                (widget.isEn
+                (widget.isEnglish
                     ? "vosk-model-small-en-us-0.15"
                     : "vosk-model-ar-mgb2-0.4")))
             .then((modelDescription) =>
@@ -159,11 +172,11 @@ class _speechToTextBtnState extends State<speechToTextBtn> {
         await speechToText.stop();
       });
     } else {
-      await speechToText.listen(
-        onResult: (result) => widget.theText(ResultSuportedGoogle(result)),
-        localeId: widget.isEn ? "en-US" : "ar-SA",
-      );
-      setState(() {
+      setState(() async {
+        await speechToText.listen(
+          onResult: (result) => widget.theText(ResultSuportedGoogle(result)),
+          localeId: widget.isEnglish ? "en-US" : "ar-SA",
+        );
         fullText = "";
       });
     }
@@ -198,18 +211,13 @@ Future<bool> isAndroidGoogleNotSupported() async {
   // Check if the platform is Android
   if (!Platform.isAndroid) return false;
 
-  // Attempt to get information about Google Play services
   try {
-    final packageInfo = await PackageInfo.fromPlatform();
-    // Logic to check Google services support, this could involve checking packageInfo or other means.
-    // For example, you could add checks for Google Play Store or related services.
+    await PackageInfo.fromPlatform();
 
-    // Assuming a custom condition for demonstration:
-    bool googleServicesSupported = true; // Replace this with actual check logic
+    bool googleServicesSupported = true;
 
-    return !googleServicesSupported; // Return true if Google services are not supported
+    return !googleServicesSupported;
   } on PlatformException {
-    // Handle the error and return that Google services are not supported
-    return true; // Default to not supported if there's an error
+    return true;
   }
 }
